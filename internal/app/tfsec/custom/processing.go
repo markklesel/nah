@@ -18,103 +18,141 @@ import (
 	"github.com/aquasecurity/tfsec/internal/app/tfsec/scanner"
 )
 
-var matchFunctions = map[CheckAction]func(block.Block, *MatchSpec) bool{
-	IsPresent: func(block block.Block, spec *MatchSpec) bool {
-		return block.HasChild(spec.Name) || spec.IgnoreUndefined
+var matchFunctions = map[CheckAction]func(block.Block, *MatchSpec) CustomResultState{
+
+	IsPresent: func(block block.Block, spec *MatchSpec) CustomResultState {
+		if block.HasChild(spec.Name) {
+			return CustomResultSuccess
+		}
+		return handleUndefined(spec.IgnoreUndefined)
+
 	},
-	NotPresent: func(block block.Block, spec *MatchSpec) bool { return !block.HasChild(spec.Name) },
-	IsEmpty: func(block block.Block, spec *MatchSpec) bool {
+
+	NotPresent: func(block block.Block, spec *MatchSpec) CustomResultState {
+		if !block.HasChild(spec.Name) {
+			return CustomResultSuccess
+		} else {
+			return CustomResultFailure
+		}
+	},
+
+	IsEmpty: func(block block.Block, spec *MatchSpec) CustomResultState {
 		if block.MissingChild(spec.Name) {
-			return true
+			return CustomResultSuccess
 		}
 
 		attribute := block.GetAttribute(spec.Name)
 		if attribute != nil {
-			return attribute.IsEmpty()
+			if attribute.IsEmpty() {
+				return CustomResultSuccess
+			}
+		} else {
+			childBlock := block.GetBlock(spec.Name)
+			if childBlock.IsEmpty() {
+				return CustomResultSuccess
+			}
 		}
-		childBlock := block.GetBlock(spec.Name)
-		return childBlock.IsEmpty()
+		return CustomResultFailure
 	},
-	StartsWith: func(block block.Block, spec *MatchSpec) bool {
+
+	StartsWith: func(block block.Block, spec *MatchSpec) CustomResultState {
 		attribute := block.GetAttribute(spec.Name)
 		if attribute.IsNil() {
 			return spec.IgnoreUndefined
 		}
 		return attribute.StartsWith(spec.MatchValue)
 	},
-	EndsWith: func(block block.Block, spec *MatchSpec) bool {
+
+	EndsWith: func(block block.Block, spec *MatchSpec) CustomResultState {
 		attribute := block.GetAttribute(spec.Name)
 		if attribute.IsNil() {
 			return spec.IgnoreUndefined
 		}
 		return attribute.EndsWith(spec.MatchValue)
 	},
-	Contains: func(b block.Block, spec *MatchSpec) bool {
+
+	Contains: func(b block.Block, spec *MatchSpec) CustomResultState {
 		attribute := b.GetAttribute(spec.Name)
 		if attribute.IsNil() {
 			return spec.IgnoreUndefined
 		}
 		return attribute.Contains(spec.MatchValue, block.IgnoreCase)
 	},
-	NotContains: func(block block.Block, spec *MatchSpec) bool {
+
+	NotContains: func(block block.Block, spec *MatchSpec) CustomResultState {
 		attribute := block.GetAttribute(spec.Name)
 		if attribute.IsNil() {
 			return spec.IgnoreUndefined
 		}
 		return !attribute.Contains(spec.MatchValue)
 	},
-	Equals: func(block block.Block, spec *MatchSpec) bool {
+
+	Equals: func(block block.Block, spec *MatchSpec) CustomResultState {
 		attribute := block.GetAttribute(spec.Name)
 		if attribute.IsNil() {
 			return spec.IgnoreUndefined
 		}
 		return attribute.Equals(spec.MatchValue)
 	},
-	LessThan: func(block block.Block, spec *MatchSpec) bool {
+
+	LessThan: func(block block.Block, spec *MatchSpec) CustomResultState {
 		attribute := block.GetAttribute(spec.Name)
 		if attribute.IsNil() {
 			return spec.IgnoreUndefined
 		}
 		return attribute.LessThan(spec.MatchValue)
 	},
-	LessThanOrEqualTo: func(block block.Block, spec *MatchSpec) bool {
+
+	LessThanOrEqualTo: func(block block.Block, spec *MatchSpec) CustomResultState {
 		attribute := block.GetAttribute(spec.Name)
 		if attribute.IsNil() {
 			return spec.IgnoreUndefined
 		}
 		return attribute.LessThanOrEqualTo(spec.MatchValue)
 	},
-	GreaterThan: func(block block.Block, spec *MatchSpec) bool {
+
+	GreaterThan: func(block block.Block, spec *MatchSpec) CustomResultState {
 		attribute := block.GetAttribute(spec.Name)
 		if attribute.IsNil() {
 			return spec.IgnoreUndefined
 		}
 		return attribute.GreaterThan(spec.MatchValue)
 	},
-	GreaterThanOrEqualTo: func(block block.Block, spec *MatchSpec) bool {
+
+	GreaterThanOrEqualTo: func(block block.Block, spec *MatchSpec) CustomResultState {
 		attribute := block.GetAttribute(spec.Name)
 		if attribute.IsNil() {
 			return spec.IgnoreUndefined
 		}
 		return attribute.GreaterThanOrEqualTo(spec.MatchValue)
 	},
-	RegexMatches: func(block block.Block, spec *MatchSpec) bool {
+
+	RegexMatches: func(block block.Block, spec *MatchSpec) CustomResultState {
 		attribute := block.GetAttribute(spec.Name)
 		if attribute.IsNil() {
 			return spec.IgnoreUndefined
 		}
 		return attribute.RegexMatches(spec.MatchValue)
 	},
-	IsAny: func(block block.Block, spec *MatchSpec) bool {
+
+	IsAny: func(block block.Block, spec *MatchSpec) CustomResultState {
 		attribute := block.GetAttribute(spec.Name)
 		return attribute != nil && attribute.IsAny(unpackInterfaceToInterfaceSlice(spec.MatchValue)...)
 	},
-	IsNone: func(block block.Block, spec *MatchSpec) bool {
+
+	IsNone: func(block block.Block, spec *MatchSpec) CustomResultState {
 		attribute := block.GetAttribute(spec.Name)
 		if attribute.IsNil() {
-			return spec.IgnoreUndefined
+			if spec.IgnoreUndefined {
+				return CustomResultSuccess
+			} else {
+				return CustomResultFailure
+			}
 		}
-		return attribute.IsNone(unpackInterfaceToInterfaceSlice(spec.MatchValue)...)
+		if attribute.IsNone(unpackInterfaceToInterfaceSlice(spec.MatchValue)...) {
+			return CustomResultSuccess
+		}
+		return CustomResultFailure
 	},
 }
 
@@ -138,7 +176,7 @@ func processFoundChecks(checks ChecksFile) {
 				DefaultSeverity: severity.Medium,
 				CheckFunc: func(set result.Set, rootBlock block.Block, ctx *hclcontext.Context) {
 					matchSpec := customCheck.MatchSpec
-					if !evalMatchSpec(rootBlock, matchSpec, ctx) {
+					if evalMatchSpec(rootBlock, matchSpec, ctx) == CustomResultFailure {
 						set.AddResult().
 							WithDescription("Custom check failed for resource %s. %s", rootBlock.FullName(), customCheck.ErrorMessage).
 							WithSeverity(customCheck.Severity)
@@ -149,21 +187,29 @@ func processFoundChecks(checks ChecksFile) {
 	}
 }
 
-func evalMatchSpec(b block.Block, spec *MatchSpec, ctx *hclcontext.Context) bool {
+func evalMatchSpec(b block.Block, spec *MatchSpec, ctx *hclcontext.Context) CustomResultState {
 	if b.IsNil() {
-		return false
+		return CustomResultSuccess
 	}
-	var evalResult bool
+	var evalResult CustomResultState
 
 	switch spec.Action {
 	case InModule:
-		return b.InModule()
+		if b.InModule() {
+			return CustomResultSuccess
+		}
 	case RegexMatches:
-		if !matchFunctions[RegexMatches](b, spec) {
-			return spec.IgnoreUnmatched
+		if matchFunctions[RegexMatches](b, spec) == CustomResultFailure {
+			if spec.IgnoreUnmatched {
+				return CustomResultSuccess
+			} else {
+				return CustomResultFailure
+			}
 		}
 	case HasTag:
-		return checkTags(b, spec, ctx)
+		if checkTags(b, spec, ctx) == CustomResultSuccess {
+
+		}
 	case OfType:
 		return ofType(b, spec)
 	case RequiresPresence:
@@ -185,32 +231,32 @@ func evalMatchSpec(b block.Block, spec *MatchSpec, ctx *hclcontext.Context) bool
 	return evalResult
 }
 
-func notifyPredicate(b block.Block, spec *MatchSpec, ctx *hclcontext.Context) bool {
-	return !evalMatchSpec(b, &spec.PredicateMatchSpec[0], ctx)
+func notifyPredicate(b block.Block, spec *MatchSpec, ctx *hclcontext.Context) CustomResultState {
+	return evalMatchSpec(b, &spec.PredicateMatchSpec[0], ctx)
 }
 
-func processOrPredicate(spec *MatchSpec, b block.Block, ctx *hclcontext.Context) bool {
+func processOrPredicate(spec *MatchSpec, b block.Block, ctx *hclcontext.Context) CustomResultState {
 	for _, childSpec := range spec.PredicateMatchSpec {
-		if evalMatchSpec(b, &childSpec, ctx) {
-			return true
+		if evalMatchSpec(b, &childSpec, ctx) == CustomResultFailure {
+			return CustomResultFailure
 		}
 	}
-	return false
+	return CustomResultSuccess
 }
 
-func processAndPredicate(spec *MatchSpec, b block.Block, ctx *hclcontext.Context) bool {
+func processAndPredicate(spec *MatchSpec, b block.Block, ctx *hclcontext.Context) CustomResultState {
 	for _, childSpec := range spec.PredicateMatchSpec {
-		if !evalMatchSpec(b, &childSpec, ctx) {
-			return false
+		if evalMatchSpec(b, &childSpec, ctx) == CustomResultFailure {
+			return CustomResultFailure
 		}
 	}
-	return true
+	return CustomResultSuccess
 }
 
-func processSubMatches(spec *MatchSpec, b block.Block, evalResult bool) bool {
+func processSubMatches(spec *MatchSpec, b block.Block, evalResult CustomResultState) CustomResultState {
 	for _, b := range b.GetBlocks(spec.Name) {
 		evalResult = evalMatchSpec(b, spec.SubMatch, nil)
-		if !evalResult {
+		if evalResult == CustomResultFailure {
 			break
 		}
 	}
@@ -218,10 +264,13 @@ func processSubMatches(spec *MatchSpec, b block.Block, evalResult bool) bool {
 	return evalResult
 }
 
-func resourceFound(spec *MatchSpec, ctx *hclcontext.Context) bool {
+func resourceFound(spec *MatchSpec, ctx *hclcontext.Context) CustomResultState {
 	val := fmt.Sprintf("%v", spec.Name)
 	byType := ctx.GetResourcesByType(val)
-	return len(byType) > 0
+	if len(byType) > 0 {
+		return CustomResultSuccess
+	}
+	return CustomResultFailure
 }
 
 func unpackInterfaceToInterfaceSlice(t interface{}) []interface{} {
@@ -230,4 +279,11 @@ func unpackInterfaceToInterfaceSlice(t interface{}) []interface{} {
 		return t
 	}
 	return nil
+}
+
+func handleUndefined(ignoreUndefined bool) CustomResultState {
+	if ignoreUndefined {
+		return CustomResultSuccess
+	}
+	return CustomResultFailure
 }

@@ -7,13 +7,13 @@ import (
 	"github.com/aquasecurity/tfsec/internal/app/tfsec/hclcontext"
 )
 
-func checkTags(block block.Block, spec *MatchSpec, ctx *hclcontext.Context) bool {
+func checkTags(block block.Block, spec *MatchSpec, ctx *hclcontext.Context) CustomResultState {
 	expectedTag := fmt.Sprintf("%v", spec.MatchValue)
 
 	if block.HasChild("tags") {
 		tagsBlock := block.GetAttribute("tags")
 		if tagsBlock.Contains(expectedTag) {
-			return true
+			return CustomResultSuccess
 		}
 	}
 
@@ -32,23 +32,23 @@ func checkTags(block block.Block, spec *MatchSpec, ctx *hclcontext.Context) bool
 			if defaultTags.HasChild("tags") {
 				tags := defaultTags.GetAttribute("tags")
 				if tags.Contains(expectedTag) {
-					return true
+					return CustomResultSuccess
 				}
 			}
 		}
 	}
-	return false
+	return CustomResultFailure
 }
 
-func ofType(block block.Block, spec *MatchSpec) bool {
+func ofType(block block.Block, spec *MatchSpec) CustomResultState {
 	switch value := spec.MatchValue.(type) {
 	case []interface{}:
 		for _, v := range value {
 			if block.TypeLabel() == v {
-				return true
+				return CustomResultSuccess
 			}
 		}
 	}
 
-	return false
+	return CustomResultFailure
 }

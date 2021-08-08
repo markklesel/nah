@@ -52,6 +52,14 @@
       "args": ["${workspaceFolder}/example/with_config_overrides"]
     },
     {
+      "name": "issue 1000",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/tfsec/main.go",
+      "args": ["${workspaceFolder}/example/1000"]
+    },
+    {
       "name": "module loading without init test",
       "type": "go",
       "request": "launch",

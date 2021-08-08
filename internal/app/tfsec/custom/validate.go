@@ -30,7 +30,7 @@ func Validate(checkFilePath string) error {
 					return errors.New("check json is not valid")
 				}
 				errorStrings := getErrorStrings(errs)
-				return fmt.Errorf("check failed with the following errors;\n\n - %s\n\n%s\n", errorStrings, jsonContent)
+				return fmt.Errorf("check failed with the following errors;\n\n - %s\n\n%s", errorStrings, jsonContent)
 			}
 			return nil
 		}(check); err != nil {
