@@ -24,7 +24,7 @@ github.com/agext/levenshtein
 github.com/apparentlymart/go-cidr/cidr
 # github.com/apparentlymart/go-textseg/v13 v13.0.0
 github.com/apparentlymart/go-textseg/v13/textseg
-# github.com/aquasecurity/defsec v0.0.2-0.20210823151247-f11999b0619b
+# github.com/aquasecurity/defsec v0.0.2-0.20210823211026-2fec946ab9ae
 ## explicit
 github.com/aquasecurity/defsec/definition
 github.com/aquasecurity/defsec/infra
@@ -153,7 +153,6 @@ github.com/inconshreveable/mousetrap
 github.com/jbenet/go-context/io
 # github.com/liamg/clinch v1.5.6
 ## explicit
-github.com/liamg/clinch/prompt
 github.com/liamg/clinch/terminal
 # github.com/liamg/gifwrap v0.0.6
 ## explicit
@@ -183,9 +182,6 @@ github.com/owenrumney/squealer/internal/app/squealer/mertics
 github.com/owenrumney/squealer/pkg/config
 github.com/owenrumney/squealer/pkg/result
 github.com/owenrumney/squealer/pkg/squealer
-# github.com/pkg/term v0.0.0-20190109203006-aa71e9d9e942
-github.com/pkg/term
-github.com/pkg/term/termios
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
 # github.com/rivo/uniseg v0.2.0
