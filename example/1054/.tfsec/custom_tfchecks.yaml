@@ -1,0 +1,19 @@
+---
+checks:
+- code: CUS001
+  description: Custom check to ensure the repo tag is applied to all AWS resources
+  impact: By not having a `repo` tag we can't keep track of IaC configuration location
+  resolution: Add the `repo` tag
+  requiredTypes:
+  - resource
+  requiredLabels:
+  - aws_*
+  severity: ERROR
+  matchSpec:
+    name: tags
+    action: contains
+    value: repo
+    ignoreUndefined: true
+  errorMessage: The required `repo` tag was missing
+  relatedLinks:
+    - https://d1.awsstatic.com/whitepapers/aws-tagging-best-practices.pdf
