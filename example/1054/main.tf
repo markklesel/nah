@@ -1,14 +1,15 @@
-resource "aws_s3_bucket" "bucket" {
-
-  tags = merge(
-    var.tags, { "Name" = "foo" }
-  )
+module "example" {
+  source = "./moduleWithIssues"
+  tags   = var.tags 
 }
 
+module "example-with-default-vars" {
+  source = "./moduleWithIssues"
+}
 
 variable "tags" {
   type = map(any)
   default = {
-    repo2 = "https://github.com/foo"
+    repo  = "https://github.com/foo"
   }
 }
