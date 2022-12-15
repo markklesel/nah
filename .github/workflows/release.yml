@@ -29,7 +29,7 @@ jobs:
         passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
     - name: Login to docker.io registry
-      uses: docker/login-action@v1
+      uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKERHUB_USER }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -49,7 +49,7 @@ jobs:
 
 # temporary hack to copy over the aquasec images to legacy docker hub repo
     - name: Login to docker.io registry
-      uses: docker/login-action@v1
+      uses: docker/login-action@v2
       with:
         username: ${{ secrets.TFSEC_DOCKERHUB_USER }}
         password: ${{ secrets.TFSEC_DOCKERHUB_TOKEN }}
@@ -60,7 +60,7 @@ jobs:
 
   # temporary hack to copy over the aquasec images to github packages
     - name: Docker Login
-      uses: docker/login-action@v1
+      uses: docker/login-action@v2
       with:
         registry: ghcr.io
         username: ${{ github.repository_owner }}
